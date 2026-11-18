@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">考勤记录</string>
+    <string name="channel_reminder_name">考勤提醒</string>
+    <string name="channel_reminder_desc">提醒你记录今天的考勤状态</string>
+</resources>
