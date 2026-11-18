@@ -15,47 +15,37 @@
 
 ---
 
-## 1. 构建环境（本机已装好）
+## 1. 环境要求
 
-> 下表路径是作者本机的安装位置，换机器时改成你自己的 JDK / Gradle / SDK 路径即可；`local.properties` 不进仓库。
+| 组件 | 版本 |
+|---|---|
+| JDK | 21（Temurin 21.0.13 验证通过） |
+| Gradle | 8.13（仓库已带 wrapper，不用另装） |
+| Android SDK | platform 35 + build-tools 35.0.0 |
 
-| 组件 | 版本 | 路径 |
-|---|---|---|
-| JDK | Temurin 21.0.13 | `C:\Users\majinpeng\dev\tools\jdk\jdk-21.0.13+9` |
-| Gradle | 8.13 | `C:\Users\majinpeng\dev\tools\gradle\gradle-8.13` |
-| Android SDK | cmdline-tools 12.0 + platform 35 + build-tools 35.0.0 + platform-tools | `C:\Users\majinpeng\dev\tools\android-sdk` |
-
-SDK 路径已写在 `local.properties`，换机器时改这一行即可。
+把 SDK 路径写进 `local.properties`，例如 `sdk.dir=C\:\\Users\\you\\AppData\\Local\\Android\\Sdk`。该文件被 `.gitignore` 排除，不进仓库。
 
 ## 2. 构建
 
-PowerShell：
-
-```powershell
-$env:JAVA_HOME='C:\Users\majinpeng\dev\tools\jdk\jdk-21.0.13+9'
-$env:ANDROID_HOME='C:\Users\majinpeng\dev\tools\android-sdk'
-$env:ANDROID_SDK_ROOT=$env:ANDROID_HOME
-$env:Path="$env:JAVA_HOME\bin;$env:ANDROID_HOME\platform-tools;$env:Path"
-
-& 'C:\Users\majinpeng\dev\tools\gradle\gradle-8.13\bin\gradle.bat' `
-  -p 'C:\Users\majinpeng\Documents\jilu_app' assembleDebug --console=plain
+```bash
+./gradlew assembleDebug        # macOS / Linux / Git Bash
+gradlew.bat assembleDebug      # Windows cmd / PowerShell
 ```
 
-产物：`app\build\outputs\apk\debug\app-debug.apk`
+产物：`app/build/outputs/apk/debug/app-debug.apk`
 
-单元测试（领域层，纯 JVM）：
+单元测试（领域层，纯 JVM，不需要设备）：
 
-```powershell
-& 'C:\Users\majinpeng\dev\tools\gradle\gradle-8.13\bin\gradle.bat' `
-  -p 'C:\Users\majinpeng\Documents\jilu_app' testDebugUnitTest --console=plain
+```bash
+./gradlew testDebugUnitTest
 ```
 
 ## 3. 装到手机
 
 手机开「开发者选项 → USB 调试」，连上电脑后：
 
-```powershell
-& 'C:\Users\majinpeng\dev\tools\android-sdk\platform-tools\adb.exe' install -r 'C:\Users\majinpeng\Documents\jilu_app\app\build\outputs\apk\debug\app-debug.apk'
+```bash
+adb install -r app/build/outputs/apk/debug/app-debug.apk
 ```
 
 或者把 `app-debug.apk` 拷到手机里直接点安装（需要允许「安装未知来源应用」）。
