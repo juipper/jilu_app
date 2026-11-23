@@ -21,6 +21,8 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
       - name: Show Android SDK
         run: echo "ANDROID_HOME=$ANDROID_HOME" && ls "$ANDROID_HOME/platforms" | tail -5
+      - name: Make gradlew executable
+        run: chmod +x gradlew
       - name: Build debug APK
         run: ./gradlew :app:assembleDebug --no-daemon
       - name: Collect APK
@@ -57,9 +59,9 @@ jobs:
       - name: Package MSI
         id: msi
         continue-on-error: true
-        run: ./gradlew :desktop:packageMsi --no-daemon
+        run: .\gradlew.bat :desktop:packageMsi --no-daemon
       - name: Package portable app image
-        run: ./gradlew :desktop:createDistributable --no-daemon
+        run: .\gradlew.bat :desktop:createDistributable --no-daemon
       - name: Collect MSI and ZIP
         shell: pwsh
         run: |
@@ -86,6 +88,8 @@ jobs:
           distribution: temurin
           java-version: "21"
       - uses: gradle/actions/setup-gradle@v4
+      - name: Make gradlew executable
+        run: chmod +x gradlew
       - name: Package DMG
         run: ./gradlew :desktop:packageDmg --no-daemon
       - name: Collect DMG
