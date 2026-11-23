@@ -110,3 +110,4 @@ app/src/test/java/com/jilu/attendance/domain/   # 领域层单测
 - **桌面版不提醒**：只做记录、统计、备份和换背景，没有通知和开机自启。
 - **两端数据不同步**：安卓用 Room，桌面用本地 JSON 文件，靠导出的备份 JSON 互相搬运（格式一致，双向可导入）。
 - **Release 里的安装包**由 GitHub Actions 构建：同一版本号下一个 Release 同时挂 APK / MSI / DMG。
+- **macOS 包**由 CI 在 `macos-latest` 上构建，是 Apple Silicon（arm64）版；Intel Mac 需要在 Intel runner 上另打一次。
