@@ -37,9 +37,6 @@ object DayTypeResolver {
      * 判定某个日期生效的日型。
      *
      * 优先级：单日覆盖 > 周规则 > 兜底（未命中周规则即休息日）。
-     *
-     * @param workdayOfWeek ISO 星期数字集合（1 = 周一 … 7 = 周日）
-     * @param overrides 日期（yyyy-MM-dd） → 日型 value 的覆盖表
      */
     fun resolve(
         date: LocalDate,

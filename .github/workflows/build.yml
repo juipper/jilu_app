@@ -1,0 +1,103 @@
+name: build
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  android:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+      - uses: android-actions/setup-android@v3
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Build debug APK
+        run: ./gradlew :app:assembleDebug --no-daemon
+      - name: Collect APK
+        run: |
+          mkdir -p out
+          cp app/build/outputs/apk/debug/app-debug.apk "out/jilu_app-${GITHUB_REF_NAME}.apk"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: android-apk
+          path: out/*.apk
+
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Ensure WiX on PATH
+        shell: pwsh
+        run: |
+          $candidates = @(
+            "C:\Program Files (x86)\WiX Toolset v3.14\bin",
+            "C:\Program Files (x86)\WiX Toolset v3.11\bin"
+          )
+          foreach ($c in $candidates) {
+            if (Test-Path $c) { Add-Content -Path $env:GITHUB_PATH -Value $c }
+          }
+      - name: Package MSI
+        run: ./gradlew :desktop:packageMsi --no-daemon
+      - name: Collect MSI
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path out | Out-Null
+          Copy-Item desktop/build/compose/binaries/main/msi/*.msi "out/jilu_app-$env:GITHUB_REF_NAME-windows.msi"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows-msi
+          path: out/*.msi
+
+  macos:
+    runs-on: macos-13
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Package DMG
+        run: ./gradlew :desktop:packageDmg --no-daemon
+      - name: Collect DMG
+        run: |
+          mkdir -p out
+          cp desktop/build/compose/binaries/main/dmg/*.dmg "out/jilu_app-${GITHUB_REF_NAME}-macos.dmg"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: macos-dmg
+          path: out/*.dmg
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/')
+    needs: [android, windows, macos]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+      - name: List
+        run: find artifacts -type f -printf "%p %s bytes\n"
+      - uses: softprops/action-gh-release@v2
+        with:
+          name: ${{ github.ref_name }}
+          tag_name: ${{ github.ref_name }}
+          generate_release_notes: true
+          files: |
+            artifacts/android-apk/*.apk
+            artifacts/windows-msi/*.msi
+            artifacts/macos-dmg/*.dmg
