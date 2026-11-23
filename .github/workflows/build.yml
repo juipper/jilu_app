@@ -73,6 +73,13 @@ jobs:
             $line = ($b.Line -replace '%','%25') -replace "`r",''
             Write-Host "::error::$line"
           }
+          $err = Get-ChildItem -Path "desktop/build/compose/logs/packageMsi" -Filter '*-err.txt' -ErrorAction SilentlyContinue | Sort-Object LastWriteTime | Select-Object -Last 1
+          if ($err) {
+            Get-Content $err.FullName -Tail 15 | ForEach-Object {
+              $l = ($_ -replace '%','%25') -replace "`r",''
+              Write-Host "::error::JP| $l"
+            }
+          }
       - name: Package portable app image
         run: .\gradlew.bat :desktop:createDistributable --no-daemon
       - name: Collect MSI and ZIP
