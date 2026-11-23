@@ -18,6 +18,12 @@ import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
 import androidx.compose.ui.window.rememberWindowState
 import java.awt.Dimension
+import java.awt.datatransfer.DataFlavor
+import java.awt.dnd.DnDConstants
+import java.awt.dnd.DropTarget
+import java.awt.dnd.DropTargetAdapter
+import java.awt.dnd.DropTargetDropEvent
+import java.io.File
 import java.time.LocalDate
 import java.time.YearMonth
 
@@ -35,6 +41,27 @@ fun main() = application {
         AppTheme {
             val focus = remember { FocusRequester() }
             LaunchedEffect(Unit) { runCatching { focus.requestFocus() } }
+            LaunchedEffect(Unit) {
+                window.dropTarget = DropTarget(
+                    window,
+                    DnDConstants.ACTION_COPY,
+                    object : DropTargetAdapter() {
+                        override fun drop(dtde: DropTargetDropEvent) {
+                            dtde.acceptDrop(DnDConstants.ACTION_COPY)
+                            val files = runCatching {
+                                @Suppress("UNCHECKED_CAST")
+                                dtde.transferable.getTransferData(DataFlavor.javaFileListFlavor) as List<File>
+                            }.getOrNull()
+                            val image = files?.firstOrNull {
+                                it.isFile && it.extension.lowercase() in setOf("jpg", "jpeg", "png", "webp", "bmp")
+                            }
+                            if (image != null) state.importBackground(image.toPath())
+                            dtde.dropComplete(image != null)
+                        }
+                    },
+                    true
+                )
+            }
 
             Box(
                 Modifier
