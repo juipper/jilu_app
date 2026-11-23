@@ -75,10 +75,17 @@ jobs:
           }
           $err = Get-ChildItem -Path "desktop/build/compose/logs/packageMsi" -Filter '*-err.txt' -ErrorAction SilentlyContinue | Sort-Object LastWriteTime | Select-Object -Last 1
           if ($err) {
+            Write-Host "::error::JP| found log $($err.Name)"
             Get-Content $err.FullName -Tail 15 | ForEach-Object {
               $l = ($_ -replace '%','%25') -replace "`r",''
               Write-Host "::error::JP| $l"
             }
+          } else {
+            Write-Host "::error::JP| err log not found"
+          }
+          Get-Content msi.log -Tail 25 | ForEach-Object {
+            $l = ($_ -replace '%','%25') -replace "`r",''
+            if ($l.Trim().Length -gt 0) { Write-Host "::error::TAIL| $l" }
           }
       - name: Package portable app image
         run: .\gradlew.bat :desktop:createDistributable --no-daemon
