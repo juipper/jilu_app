@@ -30,9 +30,9 @@ compose.desktop {
 
         nativeDistributions {
             targetFormats(TargetFormat.Msi, TargetFormat.Dmg)
-            packageName = "jilu_app"
+            packageName = "jilu-app"
             packageVersion = "1.1.0"
-            description = "月历式个人考勤记录"
+            description = "Personal attendance calendar"
             vendor = "juipper"
 
             windows {
