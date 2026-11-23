@@ -66,26 +66,19 @@ jobs:
         if: steps.msi.outcome == 'failure'
         shell: pwsh
         run: |
-          "### MSI 失败日志" | Out-File $env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
-          Get-Content msi.log -Tail 60 | Out-File $env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
-          $bad = Select-String -Path msi.log -Pattern 'error|Error|Exception|FAILURE|失败' | Select-Object -Last 10
-          foreach ($b in $bad) {
-            $line = ($b.Line -replace '%','%25') -replace "`r",''
-            Write-Host "::error::$line"
-          }
           $err = Get-ChildItem -Path "desktop/build/compose/logs/packageMsi" -Filter '*-err.txt' -ErrorAction SilentlyContinue | Sort-Object LastWriteTime | Select-Object -Last 1
           if ($err) {
-            Write-Host "::error::JP| found log $($err.Name)"
-            Get-Content $err.FullName -Tail 15 | ForEach-Object {
-              $l = ($_ -replace '%','%25') -replace "`r",''
-              Write-Host "::error::JP| $l"
+            $lines = Get-Content $err.FullName | Where-Object { $_.Trim().Length -gt 0 } | Select-Object -First 8
+            foreach ($l in $lines) {
+              $clean = ($l -replace '%','%25') -replace "`r",''
+              Write-Host "::error::JP| $clean"
             }
           } else {
-            Write-Host "::error::JP| err log not found"
-          }
-          Get-Content msi.log -Tail 25 | ForEach-Object {
-            $l = ($_ -replace '%','%25') -replace "`r",''
-            if ($l.Trim().Length -gt 0) { Write-Host "::error::TAIL| $l" }
+            $tail = Get-Content msi.log -ErrorAction SilentlyContinue | Select-Object -Last 4
+            foreach ($l in $tail) {
+              $clean = ($l -replace '%','%25') -replace "`r",''
+              Write-Host "::error::TAIL| $clean"
+            }
           }
       - name: Package portable app image
         run: .\gradlew.bat :desktop:createDistributable --no-daemon
