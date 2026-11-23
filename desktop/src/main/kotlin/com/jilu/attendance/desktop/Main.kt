@@ -37,6 +37,7 @@ fun main() = application {
         state = windowState
     ) {
         window.minimumSize = Dimension(880, 600)
+        window.maximumSize = Dimension(1100, 760)
 
         AppTheme {
             val focus = remember { FocusRequester() }

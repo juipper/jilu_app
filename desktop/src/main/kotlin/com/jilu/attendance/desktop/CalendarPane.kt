@@ -5,10 +5,10 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -16,16 +16,9 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -36,6 +29,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.jilu.attendance.domain.DayType
@@ -44,9 +38,6 @@ import com.jilu.attendance.domain.MonthStatsCalculator
 import com.jilu.attendance.domain.Outcome
 import java.time.LocalDate
 import java.time.YearMonth
-import java.time.format.DateTimeFormatter
-
-private val dateFormatter = DateTimeFormatter.ofPattern("yyyy 年 M 月 d 日")
 
 @Composable
 fun AppContent(state: AppState) {
@@ -54,13 +45,11 @@ fun AppContent(state: AppState) {
         Header(state)
         Spacer(Modifier.height(10.dp))
         Row(Modifier.fillMaxSize().weight(1f)) {
-            Column(Modifier.weight(1f)) {
+            Column(Modifier.weight(1f).fillMaxHeight()) {
                 StatsLine(state)
-                Spacer(Modifier.height(14.dp))
-                WeekHeader(Modifier.width(380.dp))
-                Spacer(Modifier.height(6.dp))
-                CalendarGrid(state, Modifier.width(380.dp))
-                Spacer(Modifier.weight(1f))
+                Spacer(Modifier.height(10.dp))
+                CalendarArea(state, Modifier.weight(1f).fillMaxWidth())
+                Spacer(Modifier.height(4.dp))
                 HorizontalDivider(color = Color(0x33000000))
                 Legend()
             }
@@ -126,13 +115,37 @@ private fun StatsLine(state: AppState) {
     }
 }
 
+/** 月历区域：格子尺寸与间距按可用宽高自动计算，总是铺满这块区域。 */
 @Composable
-private fun WeekHeader(modifier: Modifier = Modifier) {
-    Row(modifier.fillMaxWidth()) {
+private fun CalendarArea(state: AppState, modifier: Modifier = Modifier) {
+    BoxWithConstraints(modifier, contentAlignment = Alignment.Center) {
+        val gapY = 6.dp
+        val headerHeight = 20.dp
+        val maxCellByWidth = (maxWidth - gapY * 6) / 7
+        val maxCellByHeight = (maxHeight - headerHeight - gapY * 5) / 6
+        val cell: Dp = minOf(maxCellByWidth, maxCellByHeight).coerceAtLeast(24.dp)
+        // 被高度限制时，把横向余量摊到列间距里，避免右边留白
+        val gapX: Dp = if (cell < maxCellByWidth) {
+            ((maxWidth - cell * 7) / 6).coerceAtMost(48.dp)
+        } else {
+            gapY
+        }
+
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            WeekHeader(cell, gapX)
+            Spacer(Modifier.height(gapY))
+            CalendarGrid(state, cell, gapX)
+        }
+    }
+}
+
+@Composable
+private fun WeekHeader(cell: Dp, gapX: Dp) {
+    Row(horizontalArrangement = Arrangement.spacedBy(gapX)) {
         weekLabels.forEach { label ->
             Text(
                 label,
-                modifier = Modifier.weight(1f),
+                modifier = Modifier.width(cell),
                 color = MutedText,
                 fontSize = 12.sp,
                 textAlign = TextAlign.Center
@@ -142,33 +155,31 @@ private fun WeekHeader(modifier: Modifier = Modifier) {
 }
 
 @Composable
-private fun CalendarGrid(state: AppState, modifier: Modifier = Modifier) {
+private fun CalendarGrid(state: AppState, cell: Dp, gapX: Dp) {
     val month = state.month
     val daysInMonth = month.lengthOfMonth()
     val leadingBlanks = month.atDay(1).dayOfWeek.value - 1
-    val rows = ((leadingBlanks + daysInMonth) + 6) / 7
+    val rows = (leadingBlanks + daysInMonth + 6) / 7
 
-    Column(modifier.fillMaxWidth()) {
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
         repeat(rows) { rowIndex ->
-            Row(Modifier.fillMaxWidth()) {
+            Row(horizontalArrangement = Arrangement.spacedBy(gapX)) {
                 repeat(7) { columnIndex ->
-                    val cellIndex = rowIndex * 7 + columnIndex
-                    val dayNumber = cellIndex - leadingBlanks + 1
-                    Box(Modifier.weight(1f)) {
-                        if (dayNumber in 1..daysInMonth) {
-                            val date = month.atDay(dayNumber)
-                            DayCell(
-                                date = date,
-                                isToday = date == state.today,
-                                isSelected = date == state.selected,
-                                isFuture = date.isAfter(state.today),
-                                dayType = state.dayTypeOf(date),
-                                outcome = Outcome.fromValue(state.outcomeMap[date.toString()]),
-                                onClick = { state.selected = date }
-                            )
-                        } else {
-                            Spacer(Modifier.aspectRatio(1f))
-                        }
+                    val dayNumber = rowIndex * 7 + columnIndex - leadingBlanks + 1
+                    if (dayNumber in 1..daysInMonth) {
+                        val date = month.atDay(dayNumber)
+                        DayCell(
+                            date = date,
+                            size = cell,
+                            isToday = date == state.today,
+                            isSelected = date == state.selected,
+                            isFuture = date.isAfter(state.today),
+                            dayType = state.dayTypeOf(date),
+                            outcome = Outcome.fromValue(state.outcomeMap[date.toString()]),
+                            onClick = { state.selected = date }
+                        )
+                    } else {
+                        Spacer(Modifier.size(cell))
                     }
                 }
             }
@@ -179,6 +190,7 @@ private fun CalendarGrid(state: AppState, modifier: Modifier = Modifier) {
 @Composable
 private fun DayCell(
     date: LocalDate,
+    size: Dp,
     isToday: Boolean,
     isSelected: Boolean,
     isFuture: Boolean,
@@ -206,9 +218,7 @@ private fun DayCell(
 
     Box(
         modifier = Modifier
-            .padding(3.dp)
-            .fillMaxWidth()
-            .aspectRatio(1f)
+            .size(size)
             .clip(CircleShape)
             .background(background)
             .border(width = if (isSelected || isToday) 2.dp else 1.dp, color = borderColor, shape = CircleShape)
@@ -218,7 +228,7 @@ private fun DayCell(
         Text(
             date.dayOfMonth.toString(),
             color = textColor,
-            fontSize = 15.sp,
+            fontSize = (size.value * 0.28f).coerceIn(11f, 22f).sp,
             fontWeight = if (isToday || isSelected) FontWeight.Bold else FontWeight.Normal
         )
     }
@@ -227,7 +237,7 @@ private fun DayCell(
 @Composable
 private fun Legend() {
     Row(
-        Modifier.fillMaxWidth().padding(vertical = 10.dp),
+        Modifier.fillMaxWidth().padding(vertical = 8.dp),
         horizontalArrangement = Arrangement.spacedBy(14.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
